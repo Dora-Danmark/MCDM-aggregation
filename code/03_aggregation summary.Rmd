@@ -1,0 +1,725 @@
+---
+title: "Aggregation Summary"
+# output: html_notebook
+author:
+  - name: Qiuping Ma
+date: "`r Sys.Date()`"
+# creative_commons: CC BY-NC
+output:
+  html_notebook:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    theme: paper
+    highlight: tango
+    chunk_output_type: inline
+---
+
+# Introduction
+With the aggregation results, we would like to compare the performance of aggregation models associated with different loss functions. However, aggregation models can not be compared based on the value of loss functions because of different magnitude. We first plot the results based on PPM-SPM model for better illustration. As we can see, the plots show big difference with each other. But still we cannot figure out which one is better. Thus, we propose two generalized assessment measures in order to (1) assess the performance of an individual aggregation model, and (ii) do the comparion analysis among all aggregation models.
+
+# Preparation
+
+## Set working directory
+For operation simplicity, we set the working directory as below.
+```{r}
+setwd("C:/Users/au630301/Documents/00.Qiuping/2nd Paper/code")
+getwd()
+```
+## Load the package
+```{r eval = FALSE}
+if(!require("tidyverse")) install.packages("tidyverse")
+library(tidyverse)
+if(!require("ggpubr")) install.packages("ggpubr")
+library(ggpubr)
+```
+## 
+
+### Load the aggregation result $z$
+```{r}
+agg_L2   <- read_csv("processed4/agg_L2.csv")
+L1_sr_z  <- read_csv("processed4/L1_sr_z.csv")
+L1_pi_z  <- read_csv("processed4/L1_pi_z.csv")
+L1_sw_z  <- read_csv("processed4/L1_sw_z.csv")
+L1_sqc_z <- read_csv("processed4/L1_sqc_z.csv")
+LC_sr_z  <- read_csv("processed4/LC_sr_z.csv")
+LC_pi_z  <- read_csv("processed4/LC_pi_z.csv")
+LC_sw_z  <- read_csv("processed4/LC_sw_z.csv")
+LC_sqc_z <- read_csv("processed4/LC_sqc_z.csv")
+ME_sr_z  <- read_csv("processed4/ME_sr_z.csv")
+ME_pi_z  <- read_csv("processed4/ME_pi_z.csv")
+ME_sw_z  <- read_csv("processed4/ME_sw_z.csv")
+ME_sqc_z <- read_csv("processed4/ME_sqc_z.csv")
+```
+### Load the optimal weigh $w$
+```{r}
+L1_sr_w  <- read_csv("processed4/L1_sr_w.csv")
+L1_pi_w  <- read_csv("processed4/L1_pi_w.csv")
+L1_sw_w  <- read_csv("processed4/L1_sw_w.csv")
+L1_sqc_w <- read_csv("processed4/L1_sqc_w.csv")
+LC_sr_w  <- read_csv("processed4/LC_sr_w.csv")
+LC_pi_w  <- read_csv("processed4/LC_pi_w.csv")
+LC_sw_w  <- read_csv("processed4/LC_sw_w.csv")
+LC_sqc_w <- read_csv("processed4/LC_sqc_w.csv")
+ME_sr_w  <- read_csv("processed4/ME_sr_w.csv")
+ME_pi_w  <- read_csv("processed4/ME_pi_w.csv")
+ME_sw_w  <- read_csv("processed4/ME_sw_w.csv")
+ME_sqc_w <- read_csv("processed4/ME_sqc_w.csv")
+```
+With L2 loss function, we get unique result. As for the other 3 loss functions (L1, LOG-COSH, and ME ), we use 3 learning rate (1, 0.1, 0.01) and 100 different scenarios of criteria weight.
+Given that we should minimize the objective function, we search for the optimal learning rate and criteria weight with minimal cost.
+# Aggregation summary
+### L1 loss
+```{r}
+L1_sr_cost_summary  <- read_csv("processed4/L1_sr_cost_summary.csv")
+locate_L1_sr <- which(L1_sr_cost_summary == min(L1_sr_cost_summary), arr.ind = T, useNames = T)
+L1_sr_z_star <-matrix(L1_sr_z[locate_L1_sr[1],])
+L1_sr_w_star <-matrix(L1_sr_w[locate_L1_sr[1],])
+```
+```{r}
+locate_L1_sr
+
+```
+
+```{r}
+which(L1_sr_cost_summary == min(L1_sr_cost_summary), arr.ind = T, useNames = T)
+```
+
+```{r}
+L1_pi_cost_summary  <- read_csv("processed4/L1_pi_cost_summary.csv")
+locate_L1_pi <- which(L1_pi_cost_summary == min(L1_pi_cost_summary), arr.ind = T, useNames = T)
+L1_pi_z_star <-matrix(L1_pi_z[locate_L1_pi[1],])
+L1_pi_w_star <-matrix(L1_pi_w[locate_L1_pi[1],])
+```
+```{r}
+L1_sw_cost_summary  <- read_csv("processed4/L1_sw_cost_summary.csv")
+locate_L1_sw <- which(L1_sw_cost_summary == min(L1_sw_cost_summary), arr.ind = T, useNames = T)
+L1_sw_z_star <-matrix(L1_sw_z[locate_L1_sw[1],])
+L1_sw_w_star <-matrix(L1_sw_w[locate_L1_sw[1],])
+```
+```{r}
+L1_sqc_cost_summary  <- read_csv("processed4/L1_sqc_cost_summary.csv")
+locate_L1_sqc <- which(L1_sqc_cost_summary == min(L1_sqc_cost_summary), arr.ind = T, useNames = T)
+L1_sqc_z_star <-matrix(L1_sqc_z[locate_L1_sqc[1],])
+L1_sqc_w_star <-matrix(L1_sqc_w[locate_L1_sqc[1],])
+```
+```{r}
+# summary
+L1_z_star <- cbind(as.data.frame(matrix(unlist(L1_sr_z_star))), as.data.frame(matrix(unlist(L1_pi_z_star))), as.data.frame(matrix(unlist(L1_sw_z_star))), as.data.frame(matrix(unlist(L1_sqc_z_star))))
+L1_w_star <- cbind(as.data.frame(matrix(unlist(L1_sr_w_star))), as.data.frame(matrix(unlist(L1_pi_w_star))), as.data.frame(matrix(unlist(L1_sw_w_star))), as.data.frame(matrix(unlist(L1_sqc_w_star))))
+write_csv(L1_z_star, "processed4/L1_z_star.csv" )
+write_csv(L1_w_star, "processed4/L1_w_star.csv" )
+```
+### Log-cosh loss
+```{r}
+LC_sr_cost_summary  <- read_csv("processed4/LC_sr_cost_summary.csv")
+locate_LC_sr <- which(LC_sr_cost_summary == min(LC_sr_cost_summary), arr.ind = T, useNames = T)
+LC_sr_z_star <-matrix(LC_sr_z[locate_LC_sr[1],])
+LC_sr_w_star <-matrix(LC_sr_w[locate_LC_sr[1],])
+```
+```{r}
+LC_pi_cost_summary  <- read_csv("processed4/LC_pi_cost_summary.csv")
+locate_LC_pi <- which(LC_pi_cost_summary == min(LC_pi_cost_summary), arr.ind = T, useNames = T)
+LC_pi_z_star <-matrix(LC_pi_z[locate_LC_pi[1],])
+LC_pi_w_star <-matrix(LC_pi_w[locate_LC_pi[1],])
+```
+```{r}
+LC_sw_cost_summary  <- read_csv("processed4/LC_sw_cost_summary.csv")
+locate_LC_sw <- which(LC_sw_cost_summary == min(LC_sw_cost_summary), arr.ind = T, useNames = T)
+LC_sw_z_star <-matrix(LC_sw_z[locate_LC_sw[1],])
+LC_sw_w_star <-matrix(LC_sw_w[locate_LC_sw[1],])
+```
+```{r}
+LC_sqc_cost_summary  <- read_csv("processed4/LC_sqc_cost_summary.csv")
+locate_LC_sqc <- which(LC_sqc_cost_summary == min(LC_sqc_cost_summary), arr.ind = T, useNames = T)
+LC_sqc_z_star <-matrix(LC_sqc_z[locate_LC_sqc[1],])
+LC_sqc_w_star <-matrix(LC_sqc_w[locate_LC_sqc[1],])
+```
+```{r}
+# summary
+LC_z_star <- cbind(as.data.frame(matrix(unlist(LC_sr_z_star))), as.data.frame(matrix(unlist(LC_pi_z_star))), as.data.frame(matrix(unlist(LC_sw_z_star))), as.data.frame(matrix(unlist(LC_sqc_z_star))))
+LC_w_star <- cbind(as.data.frame(matrix(unlist(LC_sr_w_star))), as.data.frame(matrix(unlist(LC_pi_w_star))), as.data.frame(matrix(unlist(LC_sw_w_star))), as.data.frame(matrix(unlist(LC_sqc_w_star))))
+write_csv(LC_z_star, "processed4/LC_z_star.csv" )
+write_csv(LC_w_star, "processed4/LC_w_star.csv" )
+```
+### ME loss
+```{r}
+ME_sr_cost_summary  <- read_csv("processed4/ME_sr_cost_summary.csv")
+locate_ME_sr <- which(ME_sr_cost_summary == min(ME_sr_cost_summary), arr.ind = T, useNames = T)
+ME_sr_z_star <-matrix(ME_sr_z[locate_ME_sr[1],])
+ME_sr_w_star <-matrix(ME_sr_w[locate_ME_sr[1],])
+```
+```{r}
+ME_pi_cost_summary  <- read_csv("processed4/ME_pi_cost_summary.csv")
+locate_ME_pi <- which(ME_pi_cost_summary == min(ME_pi_cost_summary), arr.ind = T, useNames = T)
+ME_pi_z_star <-matrix(ME_pi_z[locate_ME_pi[1],])
+ME_pi_w_star <-matrix(ME_pi_w[locate_ME_pi[1],])
+```
+```{r}
+ME_sw_cost_summary  <- read_csv("processed4/ME_sw_cost_summary.csv")
+locate_ME_sw <- which(ME_sw_cost_summary == min(ME_sw_cost_summary), arr.ind = T, useNames = T)
+ME_sw_z_star <-matrix(ME_sw_z[locate_ME_sw[1],])
+ME_sw_w_star <-matrix(ME_sw_w[locate_ME_sw[1],])
+```
+```{r}
+ME_sqc_cost_summary  <- read_csv("processed4/ME_sqc_cost_summary.csv")
+locate_ME_sqc <- which(ME_sqc_cost_summary == min(ME_sqc_cost_summary), arr.ind = T, useNames = T)
+ME_sqc_z_star <-matrix(ME_sqc_z[locate_ME_sqc[1],])
+ME_sqc_w_star <-matrix(ME_sqc_w[locate_ME_sqc[1],])
+```
+```{r}
+# summary
+ME_z_star <- cbind(as.data.frame(matrix(unlist(ME_sr_z_star))), as.data.frame(matrix(unlist(ME_pi_z_star))), as.data.frame(matrix(unlist(ME_sw_z_star))), as.data.frame(matrix(unlist(ME_sqc_z_star))))
+ME_w_star <- cbind(as.data.frame(matrix(unlist(ME_sr_w_star))), as.data.frame(matrix(unlist(ME_pi_w_star))), as.data.frame(matrix(unlist(ME_sw_w_star))), as.data.frame(matrix(unlist(ME_sqc_w_star))))
+write_csv(ME_z_star, "processed4/ME_z_star.csv" )
+write_csv(ME_w_star, "processed4/ME_w_star.csv" )
+```
+
+### Aggregation summary on z_star
+```{r}
+# summary on z_star
+z_star_initial <- cbind(agg_L2, L1_z_star, LC_z_star, ME_z_star )
+z_star <- z_star_initial[, c(1,2,6,10,14,3,7,11,15,4,8,12,16,5,9,13,17)]
+colnames(z_star) <- c("Supplier_ID", "SR_L2","SR_L1", "SR_LC", "SR_ME", "PI_L2","PI_L1", "PI_LC", "PI_ME", "SW_L2","SW_L1", "SW_LC", "SW_ME", "SQC_L2","SQC_L1", "SQC_LC", "SQC_ME")
+z_star_output <- z_star
+z_star_output[, 2:17] <- round(z_star_output[, 2:17],3)
+write_csv(z_star, "processed4/z_star.csv" )
+write_csv(z_star_output, "processed4/z_star_output.csv" )
+```
+
+```{r}
+# for beneficial aggregation score
+norm_minmax <- function(x){
+  (x- min(x)) /(max(x)-min(x))
+}
+```
+```{r}
+# normalization on z_star
+z_star_norm <- z_star
+z_star_norm_initial <- apply(z_star[,-1], 2, norm_minmax)
+z_star_norm[,-1] <- z_star_norm_initial
+z_star_norm_output <- z_star_norm
+z_star_norm_output[,-1]<- round(z_star_norm_initial,3)
+z_star_norm
+z_star_norm_output
+write_csv(z_star_norm, "processed4/z_star_norm.csv" )
+write_csv(z_star_norm_output, "processed4/z_star_norm_output.csv" )
+```
+
+### Aggregation summary on w_star
+```{r}
+if(!require("pracma")) install.packages("pracma")
+library("pracma")
+```
+```{r}
+method_no <- 6
+L2_w_star <- repmat(matrix(rep(1/method_no,method_no)),1,4)
+method_name <- matrix(c("M1", "M2", "M3", "M4", "M5", "M6"))
+w_star_initial <- cbind(method_name, L2_w_star, L1_w_star, LC_w_star, ME_w_star ) 
+w_star <- w_star_initial[, c(1,2,6,10,14,3,7,11,15,4,8,12,16,5,9,13,17)]  
+w_star_output <- w_star
+w_star_output[,-1] <- round(w_star_output[,-1],3)
+colnames(w_star) <- c("Method_ID", "SR_L2","SR_L1", "SR_LC", "SR_ME", "PI_L2","PI_L1", "PI_LC", "PI_ME", "SW_L2","SW_L1", "SW_LC", "SW_ME", "SQC_L2","SQC_L1", "SQC_LC", "SQC_ME")
+write_csv(w_star, "processed4/w_star.csv" )     
+write_csv(w_star_output, "processed4/w_star_output.csv" )  
+w_star
+w_star_output
+```
+# Comparision analysis
+### Load the MCDM results
+```{r}
+MCDM_result_norm_new   <- read_csv("processed4/MCDM_result_norm_new.csv")
+```
+
+### Spearman’s correlation coefficient function
+```{r}
+  rho <- function(A, B){
+    vector.A <- apply(-A, 2, rank)
+    vector.B <- apply(-repmat( matrix(B),1,ncol(vector.A)), 2, rank)
+    
+    rho <- rep(0,times= ncol(vector.A))  # 6
+    R_square <- (vector.A-vector.B)^2
+    
+    
+    for (i in 1 : ncol(vector.A)) {
+      rho[i] <- 1 - (6*sum(R_square[,i]))/(nrow(vector.A)^3-nrow(vector.A))
+    }
+    return(rho)
+  }
+```
+
+
+```{r}
+#test
+#  vector.A <- apply(-MCDM_result_norm_new[,2:7], 2, rank)
+#  #vector.A
+#  vector.B <- apply(-repmat( matrix(z_star_norm$SR_L2),1,ncol(vector.A)), 2, rank)
+#  #vector.B 
+#  
+#  
+#  rho <- rep(0,times= ncol(vector.A))  # 6
+#   R_square <- (vector.A-vector.B)^2
+# 
+#  for (i in 1 : ncol(vector.A)) {
+#    rho[i] <- 1 - (6*sum(R_square[,i]))/(nrow(vector.A)^3-nrow(vector.A))
+#  }
+#  rho
+# a <- sum(R_square[,1])
+# a
+# b <- 6*sum(R_square[,1])
+# b
+# 1-b/(100^3-100)
+```
+
+
+### Trust level function
+```{r}
+  trust_level <- function(A,B){
+    vector.weight <- A
+    vector.rho <- matrix(B)
+    TL <- sum(vector.weight*vector.rho)
+  }
+```
+
+### Do comparison analysis
+#### L2 loss function
+```{r}
+rho_L2_sr <-  rho(MCDM_result_norm_new[,2:7],  z_star_norm$SR_L2)
+rho_L2_pi <-  rho(MCDM_result_norm_new[,8:13],  z_star_norm$PI_L2)
+rho_L2_sw <-  rho(MCDM_result_norm_new[,14:19], z_star_norm$SW_L2)
+rho_L2_sqc <- rho(MCDM_result_norm_new[,20:25], z_star_norm$SQC_L2)
+
+rho_L2_sr
+rho_L2_pi
+rho_L2_sw
+rho_L2_sqc
+
+CI_L2_sr <-  mean(rho_L2_sr)
+CI_L2_pi <-  mean(rho_L2_pi)
+CI_L2_sw <-  mean(rho_L2_sw)
+CI_L2_sqc <- mean(rho_L2_sqc)
+
+CI_L2_sr
+CI_L2_pi
+CI_L2_sw
+CI_L2_sqc
+
+TL_L2_sr <-  trust_level(w_star$SR_L2, rho_L2_sr)/sum(w_star$SR_L2)
+TL_L2_pi <-  trust_level(w_star$PI_L2, rho_L2_pi)/sum(w_star$PI_L2)
+TL_L2_sw <-  trust_level(w_star$SW_L2, rho_L2_sw)/sum(w_star$SW_L2)
+TL_L2_sqc <- trust_level(w_star$SQC_L2, rho_L2_sqc)/sum(w_star$SQC_L2)
+
+TL_L2_sr
+TL_L2_pi
+TL_L2_sw
+TL_L2_sqc 
+```
+
+#### L1 loss function
+```{r}
+rho_L1_sr <-  rho(MCDM_result_norm_new[,2:7],  z_star_norm$SR_L1)
+rho_L1_pi <-  rho(MCDM_result_norm_new[,8:13],  z_star_norm$PI_L1)
+rho_L1_sw <-  rho(MCDM_result_norm_new[,14:19], z_star_norm$SW_L1)
+rho_L1_sqc <- rho(MCDM_result_norm_new[,20:25], z_star_norm$SQC_L1)
+
+rho_L1_sr
+rho_L1_pi
+rho_L1_sw
+rho_L1_sqc
+
+CI_L1_sr <-  mean(rho_L1_sr)
+CI_L1_pi <-  mean(rho_L1_pi)
+CI_L1_sw <-  mean(rho_L1_sw)
+CI_L1_sqc <- mean(rho_L1_sqc)
+
+CI_L1_sr
+CI_L1_pi
+CI_L1_sw
+CI_L1_sqc
+
+TL_L1_sr <-  trust_level(w_star$SR_L1, rho_L1_sr)/sum(w_star$SR_L1)
+TL_L1_pi <-  trust_level(w_star$PI_L1, rho_L1_pi)/sum(w_star$PI_L1)
+TL_L1_sw <-  trust_level(w_star$SW_L1, rho_L1_sw)/sum(w_star$SW_L1)
+TL_L1_sqc <- trust_level(w_star$SQC_L1, rho_L1_sqc)/sum(w_star$SQC_L1)
+
+TL_L1_sr
+TL_L1_pi
+TL_L1_sw
+TL_L1_sqc 
+```
+
+#### LC loss function
+```{r}
+rho_LC_sr <-  rho(MCDM_result_norm_new[,2:7],  z_star_norm$SR_LC)
+rho_LC_pi <-  rho(MCDM_result_norm_new[,8:13],  z_star_norm$PI_LC)
+rho_LC_sw <-  rho(MCDM_result_norm_new[,14:19], z_star_norm$SW_LC)
+rho_LC_sqc <- rho(MCDM_result_norm_new[,20:25], z_star_norm$SQC_LC)
+
+rho_LC_sr
+rho_LC_pi
+rho_LC_sw
+rho_LC_sqc
+
+CI_LC_sr <-  mean(rho_LC_sr)
+CI_LC_pi <-  mean(rho_LC_pi)
+CI_LC_sw <-  mean(rho_LC_sw)
+CI_LC_sqc <- mean(rho_LC_sqc)
+
+CI_LC_sr
+CI_LC_pi
+CI_LC_sw
+CI_LC_sqc
+
+TL_LC_sr <-  trust_level(w_star$SR_LC, rho_LC_sr)/sum(w_star$SR_LC)
+TL_LC_pi <-  trust_level(w_star$PI_LC, rho_LC_pi)/sum(w_star$PI_LC)
+TL_LC_sw <-  trust_level(w_star$SW_LC, rho_LC_sw)/sum(w_star$SW_LC)
+TL_LC_sqc <- trust_level(w_star$SQC_LC, rho_LC_sqc)/sum(w_star$SQC_LC)
+
+TL_LC_sr
+TL_LC_pi
+TL_LC_sw
+TL_LC_sqc 
+```
+#### ME loss function
+```{r}
+rho_ME_sr <-  rho(MCDM_result_norm_new[,2:7],  z_star_norm$SR_ME)
+rho_ME_pi <-  rho(MCDM_result_norm_new[,8:13],  z_star_norm$PI_ME)
+rho_ME_sw <-  rho(MCDM_result_norm_new[,14:19], z_star_norm$SW_ME)
+rho_ME_sqc <- rho(MCDM_result_norm_new[,20:25], z_star_norm$SQC_ME)
+
+rho_ME_sr
+rho_ME_pi
+rho_ME_sw
+rho_ME_sqc
+
+CI_ME_sr <-  mean(rho_ME_sr)
+CI_ME_pi <-  mean(rho_ME_pi)
+CI_ME_sw <-  mean(rho_ME_sw)
+CI_ME_sqc <- mean(rho_ME_sqc)
+
+CI_ME_sr
+CI_ME_pi
+CI_ME_sw
+CI_ME_sqc
+
+TL_ME_sr <-  trust_level(w_star$SR_ME, rho_ME_sr)/sum(w_star$SR_ME)
+TL_ME_pi <-  trust_level(w_star$PI_ME, rho_ME_pi)/sum(w_star$PI_ME)
+TL_ME_sw <-  trust_level(w_star$SW_ME, rho_ME_sw)/sum(w_star$SW_ME)
+TL_ME_sqc <- trust_level(w_star$SQC_ME, rho_ME_sqc)/sum(w_star$SQC_ME)
+
+TL_ME_sr
+TL_ME_pi
+TL_ME_sw
+TL_ME_sqc 
+```
+
+### Final assessment 
+Here we compare the consensus index and trust level with respect to the above 4 loss functions. Note that we have four dimensions, the comparison result may vary from one dimension to another.
+```{r}
+compar_summary <- matrix(0, nrow = 4, ncol = 9)
+# consensus index
+compar_summary[1,1] <- CI_L2_sr
+compar_summary[2,1] <- CI_L2_pi
+compar_summary[3,1] <- CI_L2_sw
+compar_summary[4,1] <- CI_L2_sqc
+compar_summary[1,2] <- CI_L1_sr
+compar_summary[2,2] <- CI_L1_pi
+compar_summary[3,2] <- CI_LC_sw
+compar_summary[4,2] <- CI_L1_sqc
+compar_summary[1,3] <- CI_LC_sr
+compar_summary[2,3] <- CI_LC_pi
+compar_summary[3,3] <- CI_LC_sw
+compar_summary[4,3] <- CI_LC_sqc
+compar_summary[1,4] <- CI_ME_sr
+compar_summary[2,4] <- CI_ME_pi
+compar_summary[3,4] <- CI_ME_sw
+compar_summary[4,4] <- CI_ME_sqc
+
+# trust level
+compar_summary[1,5] <- TL_L2_sr
+compar_summary[2,5] <- TL_L2_pi
+compar_summary[3,5] <- TL_L2_sw
+compar_summary[4,5] <- TL_L2_sqc
+compar_summary[1,6] <- TL_L1_sr
+compar_summary[2,6] <- TL_L1_pi
+compar_summary[3,6] <- TL_L1_sw
+compar_summary[4,6] <- TL_L1_sqc
+compar_summary[1,7] <- TL_LC_sr
+compar_summary[2,7] <- TL_LC_pi
+compar_summary[3,7] <- TL_LC_sw
+compar_summary[4,7] <- TL_LC_sqc
+compar_summary[1,8] <- TL_ME_sr
+compar_summary[2,8] <- TL_ME_pi
+compar_summary[3,8] <- TL_ME_sw
+compar_summary[4,8] <- TL_ME_sqc
+# dimension name
+compar_summary[1,9] <- "supplier risk"
+compar_summary[2,9] <- "profit impact"
+compar_summary[3,9] <- "supplier willingness"
+compar_summary[4,9] <- "supplier quality capability"
+
+colnames(compar_summary) <- c("CI_L2", "CI_L1","CI_LC","CI_ME", "TL_L2", "TL_L1","TL_LC","TL_ME", "dimension")
+compar_summary
+write_csv(as.data.frame(compar_summary), "processed4/compar_summary.csv" ) 
+```
+
+# Plot on the aggrgation result
+Here we would like to visualize the aggregation result along with the six MCDM methods used before. So that we can see the performance of aggrgation models and check whether they are more reliable (output consistent results) compared with usinga single MCDM method.
+
+## preparation
+### install package
+```{r}
+if(!require("ggplot2")) install.packages("ggplot2")
+library("ggplot2")
+if(!require("repr")) install.packages("repr")
+library("repr")
+if(!require("reshape2")) install.packages("reshape2")
+library("reshape2")
+```
+### load the dataset
+```{r}
+MCDM_result_norm_new <- read_csv("processed4/MCDM_result_norm_new.csv")
+```
+
+## Plot
+### Supply Risk
+```{r}
+df_sr_ag <- cbind(MCDM_result_norm_new[1:10, 1:7], z_star_norm[1:10, 2:5]) %>%
+  rename(M1 = M1_sr,
+         M2 = M2_sr,
+         M3 = M3_sr,
+         M4 = M4_sr,
+         M5 = M5_sr,
+         M6 = M6_sr,
+         AG1 = SR_L2,
+         AG2 = SR_L1,
+         AG3 = SR_LC,
+         AG4 = SR_ME
+  )
+
+```
+
+```{r}
+df_sr_melt_ag = melt(df_sr_ag, id = "Supplier_ID")
+df_sr_melt_ag
+```
+```{r}
+df_sr_melt_ag <-df_sr_melt_ag %>%
+  rename(Method = variable,
+         Score = value)
+df_sr_melt_ag
+```
+```{r}
+plot_sr_ag <- ggplot(df_sr_melt_ag, aes(x = Method, y = Score, group = Supplier_ID)) + 
+  geom_line() + 
+  facet_wrap(Supplier_ID ~ ., nrow = 2, ncol = 5) +
+  geom_point() +
+  labs(
+  title = "Supplier risk",
+  x = "models",
+  y = "Score"
+  ) +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylim(0, 1)
+ggsave(file="processed4/plot/plot_sr_ag.pdf",width=12, height=2.5, dpi=300)
+```
+
+### Profit impact
+```{r}
+df_pi_ag <- cbind(MCDM_result_norm_new[1:10, c(1,8:13)], z_star_norm[1:10, 6:9]) %>%
+  rename(M1 = M1_pi,
+         M2 = M2_pi,
+         M3 = M3_pi,
+         M4 = M4_pi,
+         M5 = M5_pi,
+         M6 = M6_pi,
+         AG1 = PI_L2,
+         AG2 = PI_L1,
+         AG3 = PI_LC,
+         AG4 = PI_ME
+  )
+
+```
+
+```{r}
+df_pi_melt_ag = melt(df_pi_ag, id = "Supplier_ID")
+df_pi_melt_ag
+```
+```{r}
+df_pi_melt_ag <-df_pi_melt_ag %>%
+  rename(Method = variable,
+         Score = value)
+df_pi_melt_ag
+```
+```{r}
+plot_pi_ag <- ggplot(df_pi_melt_ag, aes(x = Method, y = Score, group = Supplier_ID)) + 
+  geom_line() + 
+  facet_wrap(Supplier_ID ~ ., nrow = 2, ncol = 5) +
+  geom_point() +
+  labs(
+  title = "Profit impact",
+  x = "models",
+  y = "Score"
+  ) +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylim(0, 1)
+ggsave(file="processed4/plot/plot_pi_ag.pdf",width=12, height=2.5, dpi=300)
+```
+
+### Supplier willingness
+```{r}
+df_sw_ag <- cbind(MCDM_result_norm_new[1:10, c(1,14:19)], z_star_norm[1:10, 10:13]) %>%
+  rename(M1 = M1_sw,
+         M2 = M2_sw,
+         M3 = M3_sw,
+         M4 = M4_sw,
+         M5 = M5_sw,
+         M6 = M6_sw,
+         AG1 = SW_L2,
+         AG2 = SW_L1,
+         AG3 = SW_LC,
+         AG4 = SW_ME
+  )
+
+```
+
+```{r}
+df_sw_melt_ag = melt(df_sw_ag, id = "Supplier_ID")
+df_sw_melt_ag
+```
+```{r}
+df_sw_melt_ag <-df_sw_melt_ag %>%
+  rename(Method = variable,
+         Score = value)
+df_sw_melt_ag
+```
+```{r}
+plot_sw_ag <- ggplot(df_sw_melt_ag, aes(x = Method, y = Score, group = Supplier_ID)) + 
+  geom_line() + 
+  facet_wrap(Supplier_ID ~ ., nrow = 2, ncol = 5) +
+  geom_point() +
+  labs(
+  title = "Supplier willingness",
+  x = "models",
+  y = "Score"
+  ) +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylim(0, 1)
+ggsave(file="processed4/plot/plot_sw_ag.pdf",width=12, height=2.5, dpi=300)
+```
+
+
+### Supplier Quality Capability
+```{r}
+df_sqc_ag <- cbind(MCDM_result_norm_new[1:10, c(1,20:25)], z_star_norm[1:10, 14:17]) %>%
+  rename(M1 = M1_sqc,
+         M2 = M2_sqc,
+         M3 = M3_sqc,
+         M4 = M4_sqc,
+         M5 = M5_sqc,
+         M6 = M6_sqc,
+         AG1 = SQC_L2,
+         AG2 = SQC_L1,
+         AG3 = SQC_LC,
+         AG4 = SQC_ME
+  )
+
+```
+
+```{r}
+df_sqc_melt_ag = melt(df_sqc_ag, id = "Supplier_ID")
+df_sqc_melt_ag
+```
+```{r}
+df_sqc_melt_ag <-df_sqc_melt_ag %>%
+  rename(Method = variable,
+         Score = value)
+df_sqc_melt_ag
+```
+```{r}
+plot_sqc_ag <- ggplot(df_sqc_melt_ag, aes(x = Method, y = Score, group = Supplier_ID)) + 
+  geom_line() + 
+  facet_wrap(Supplier_ID ~ ., nrow = 2, ncol = 5) +
+  geom_point() +
+  #geom_path(aes(group = 5)) +
+  labs(
+  title = "Supplier quality capability",
+  x = "models",
+  y = "Score"
+  ) +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylim(0, 1)
+ggsave(file="processed4/plot/plot_sqc_ag.pdf",width=12, height=2.5, dpi=300)
+```
+```{r}
+plot_sqc_ag
+```
+
+
+## Plot summary
+```{r}
+if(!require("ggpubr")) install.packages("ggpubr")
+library("ggpubr")
+```
+
+```{r}
+ggarrange(plot_sr_ag,plot_pi_ag, plot_sw_ag, plot_sqc_ag,
+          ncol = 1, nrow = 4)
+ggsave(file="processed4/plot/plot_summary_ag.pdf",width=12, height=17, dpi=300)
+```
+
+# Time summary
+
+### Load the time summary data set
+```{r}
+L1_sr_time  <- read_csv("processed4/L1_sr_time_summary.csv")
+L1_pi_time  <- read_csv("processed4/L1_pi_time_summary.csv")
+L1_sw_time  <- read_csv("processed4/L1_sw_time_summary.csv")
+L1_sqc_time <- read_csv("processed4/L1_sqc_time_summary.csv")
+LC_sr_time  <- read_csv("processed4/LC_sr_time_summary.csv")
+LC_pi_time  <- read_csv("processed4/LC_pi_time_summary.csv")
+LC_sw_time  <- read_csv("processed4/LC_sw_time_summary.csv")
+LC_sqc_time <- read_csv("processed4/LC_sqc_time_summary.csv")
+ME_sr_time  <- read_csv("processed4/ME_sr_time_summary.csv")
+ME_pi_time  <- read_csv("processed4/ME_pi_time_summary.csv")
+ME_sw_time  <- read_csv("processed4/ME_sw_time_summary.csv")
+ME_sqc_time <- read_csv("processed4/ME_sqc_time_summary.csv")
+```
+
+```{r}
+time_summary_all <- vector()
+time_summary_all[1] <- sum(L1_sr_time)
+time_summary_all[2] <- sum(LC_sr_time)
+time_summary_all[3] <- sum(ME_sr_time)
+time_summary_all[4] <- sum(L1_pi_time)
+time_summary_all[5] <- sum(LC_pi_time)
+time_summary_all[6] <- sum(ME_pi_time)
+time_summary_all[7] <- sum(L1_sw_time)
+time_summary_all[8] <- sum(LC_sw_time)
+time_summary_all[9] <- sum(ME_sw_time)
+time_summary_all[10] <- sum(L1_sqc_time)
+time_summary_all[11] <- sum(LC_sqc_time)
+time_summary_all[12] <- sum(ME_sqc_time)
+
+```
+
+```{r}
+time_summary_all
+write_csv(as.data.frame(time_summary_all), "processed4/time_summary_all.csv" )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

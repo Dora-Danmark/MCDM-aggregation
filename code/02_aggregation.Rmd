@@ -1,0 +1,1005 @@
+---
+title: "Aggregation"
+# output: html_notebook
+author:
+  - name: Qiuping Ma
+date: "`r Sys.Date()`"
+# creative_commons: CC BY-NC
+output:
+  html_notebook:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    theme: paper
+    highlight: tango
+    chunk_output_type: inline
+---
+# Introduction
+With the results of 6 MCDM methods, now we move to the step of aggregation. The aggregation is based on the idea that a combination of different MCDM methods can provide a robust and comprehensive result. Even though we calculate the differences between various MCDM methods, there is no sufficient evidence shows that the specific method with the largest difference outputs the least reliable results. Therefore, all the reuslts of the 6 MCDM methods are served as the input of the aggregation.
+
+We propose a new aggregated approach from the machine learning perspective in which four well-known loss functions are integrated with the results obatined from former step.
+
+# Preparation
+## Set working directory and load the package
+For operation simplicity, we set the working directory as below.
+```{r}
+setwd("C:/Users/au630301/Documents/00.Qiuping/2nd Paper/code")
+getwd()
+```
+```{r}
+if(!require("tidyverse")) install.packages("tidyverse")
+library(tidyverse)
+if(!require("Metrics")) install.packages("Metrics")
+library("Metrics")
+if(!require("pracma")) install.packages("pracma")
+library("pracma")
+```
+## Load the data set
+```{r eval = FALSE}
+MCDM_result_norm_new <- read_csv("processed4/MCDM_result_norm_new.csv")
+# MCDM_result_norm_new
+```
+```{r}
+agg_sr_df  <- MCDM_result_norm_new[,c(2:7)]
+agg_pi_df  <- MCDM_result_norm_new[,c(8:13)]
+agg_sw_df  <- MCDM_result_norm_new[,c(14:19)]
+agg_sqc_df <- MCDM_result_norm_new[,c(20:25)]
+# agg_sr_df
+```
+# Aggregation
+## learning rate and Initial weight setting
+We test 3 learning rate: 1, 0.1, and 0.01.
+We test 100 different scenarios of criteria weight.
+```{r}
+# Learning rate setting
+learn_rate <- c(1, 0.1, 0.01)
+```
+
+```{r}
+# Initial weight setting
+set.seed(123)
+scen_no <- 100
+initial_weight <- matrix(NA, scen_no, 6)
+for (i in 1:scen_no) {
+  initial_weight[i,] = prop.table(runif(6))
+}
+write_csv(as.data.frame(initial_weight), "processed4/initial_weight.csv" )
+```
+## L2 loss function
+### Load the package
+```{r}
+if(!require("optimx")) install.packages("optimx")
+library("optimx")
+```
+```{r}
+# Optimization model format
+#optimx(par, fn, gr=Null, Hess=Null, lower=inf,
+       #upper=inf, method='', itnmax=Null, ...)
+```
+### Supply risk
+```{r}
+# set up the optimization function
+fn_L2_sr <- function(A){
+  vector.A <- A
+  
+  Y <- as.numeric(stats::dist(rbind(vector.A, t(agg_sr_df[,1])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sr_df[,2])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sr_df[,3])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sr_df[,4])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sr_df[,5])))^2) + 
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sr_df[,6])))^2)
+  return(Y)
+}
+```
+```{r}
+# calculation
+optimx(rep(0, times = nrow(agg_sr_df)),fn_L2_sr, method = c("Nelder-Mead", "CG", "BFGS", "spg", "nlm"))
+agg_sr_L2 <- optimx(rep(0, times = nrow(agg_sr_df)),fn_L2_sr, method = "CG")
+# agg_sr_L2
+```
+### Profit impact
+```{r}
+# set up the optimization function
+fn_L2_pi <- function(A){
+  vector.A <- A
+  
+  Y <- as.numeric(stats::dist(rbind(vector.A, t(agg_pi_df[,1])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_pi_df[,2])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_pi_df[,3])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_pi_df[,4])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_pi_df[,5])))^2) + 
+       as.numeric(stats::dist(rbind(vector.A, t(agg_pi_df[,6])))^2)
+    
+  return(Y)
+}
+```
+```{r}
+# calculation
+optimx(rep(0, times = nrow(agg_pi_df)),fn_L2_pi, method = c("Nelder-Mead", "CG", "BFGS", "spg", "nlm"))
+agg_pi_L2 <- optimx(rep(0, times = nrow(agg_pi_df)),fn_L2_pi, method = "CG")
+```
+### Supplier willingness
+```{r}
+# set up the optimization function
+fn_L2_sw <- function(A){
+  vector.A <- A
+  
+  Y <- as.numeric(stats::dist(rbind(vector.A, t(agg_sw_df[,1])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sw_df[,2])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sw_df[,3])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sw_df[,4])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sw_df[,5])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sw_df[,6])))^2)
+    
+  return(Y)
+}
+```
+```{r}
+# calculation
+optimx(rep(0, times = nrow(agg_sw_df)),fn_L2_sw, method = c("Nelder-Mead", "CG", "BFGS", "spg", "nlm"))
+agg_sw_L2 <- optimx(rep(0, times = nrow(agg_sw_df)),fn_L2_sw, method = "CG")
+```
+### Supplier quality capability
+```{r}
+# set up the optimizatin function
+fn_L2_sqc <- function(A){
+  vector.A <- A
+  
+  Y <- as.numeric(stats::dist(rbind(vector.A, t(agg_sqc_df[,1])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sqc_df[,2])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sqc_df[,3])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sqc_df[,4])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sqc_df[,5])))^2) +
+       as.numeric(stats::dist(rbind(vector.A, t(agg_sqc_df[,6])))^2)
+    
+  return(Y)
+}
+```
+```{r}
+# calculation
+optimx(rep(0, times = nrow(agg_sqc_df)),fn_L2_sqc, method = c("Nelder-Mead", "CG", "BFGS", "spg", "nlm"))
+agg_sqc_L2 <- optimx(rep(0, times = nrow(agg_sqc_df)),fn_L2_sqc, method = "CG")
+```
+### Result summary
+```{r}
+Supplier_ID <- c("A_{01}", "A_{02}", "A_{03}", "A_{04}", "A_{05}","A_{06}", "A_{07}", "A_{08}", "A_{09}", "A_{10}",
+                 "A_{11}", "A_{12}", "A_{13}", "A_{14}", "A_{15}","A_{16}", "A_{17}", "A_{18}", "A_{19}", "A_{20}",
+                 "A_{21}", "A_{22}", "A_{23}", "A_{24}", "A_{25}","A_{26}", "A_{27}", "A_{28}", "A_{29}", "A_{30}",
+                 "A_{31}", "A_{32}", "A_{33}", "A_{34}", "A_{35}","A_{36}", "A_{37}", "A_{38}", "A_{39}", "A_{40}",
+                 "A_{41}", "A_{42}", "A_{43}", "A_{44}", "A_{45}","A_{46}", "A_{47}", "A_{48}", "A_{49}", "A_{50}",
+                 "A_{51}", "A_{52}", "A_{53}", "A_{54}", "A_{55}","A_{56}", "A_{57}", "A_{58}", "A_{59}", "A_{60}",
+                 "A_{61}", "A_{62}", "A_{63}", "A_{64}", "A_{65}","A_{66}", "A_{67}", "A_{68}", "A_{69}", "A_{70}",
+                 "A_{71}", "A_{72}", "A_{73}", "A_{74}", "A_{75}","A_{76}", "A_{77}", "A_{78}", "A_{79}", "A_{80}",
+                 "A_{81}", "A_{82}", "A_{83}", "A_{84}", "A_{85}","A_{86}", "A_{87}", "A_{88}", "A_{89}", "A_{90}",
+                 "A_{91}", "A_{92}", "A_{93}", "A_{94}", "A_{95}","A_{96}", "A_{97}", "A_{98}", "A_{99}", "A_{100}"
+)  
+```
+```{r}
+agg_L2 <- cbind(as.data.frame(Supplier_ID),unlist(matrix(agg_sr_L2[1:nrow(MCDM_result_norm_new)])),unlist(matrix(agg_pi_L2[1:nrow(MCDM_result_norm_new)])),unlist(matrix(agg_sw_L2[1:nrow(MCDM_result_norm_new)])),unlist(matrix(agg_sqc_L2[1:nrow(MCDM_result_norm_new)])))
+
+colnames(agg_L2, do.NULL = TRUE, prefix = "col")
+colnames(agg_L2) <- c("Supplier_ID", "Supplier_risk","Profit_impact", "Supplier_willingness", "Supplier_quality_capability" )
+
+write_csv(as.data.frame(agg_L2), "processed4/agg_L2.csv" )
+agg_L2
+```
+L2 loss function has a closed-form solution. Thus, L2 loss function yields identical weight for each MDM method being-used. This is because the optimal weight vector will be the averaged weight vector when setting the derivative of L2 loss function to be zero.
+## L1 loss function
+### Set up function
+#### Iteration function
+```{r}
+Fn_L1 <- function(A, B, C){
+  vector.w <- A
+  matrix.Y <- as.matrix(B)
+  method_no <- ncol(matrix.Y)
+  alt_no <- nrow(matrix.Y)
+  vector.z <- matrix.Y %*% vector.w
+  learning_rate <- C
+  
+  # parameter initialization
+  tol <- 10e-10 # tolerance based on which the main loop is terminated
+  iter_max <- 10e5 # maximum number of iteration
+  t <- 0        # iteration indicator
+  Error_ae_sum <- rep(0,times = alt_no)
+  g <- rep(0,times = method_no)
+  w <- rep(0,times = method_no)
+  
+  while(t < iter_max){
+    Error <- matrix.Y - repmat(vector.z,1,method_no)
+    Error_ae <- abs(Error)
+    Error_ae_divid <- Error/Error_ae
+    Error_ae_divid[is.na(Error_ae_divid)] <- 0
+    
+    for (i in 1: alt_no) {
+      Error_ae_sum[i] <- sum(Error_ae_divid[i,])
+    }
+    
+    for (k in 1: method_no) {
+      g[k] <- sum(Error_ae_sum * matrix.Y[,k])/(method_no * alt_no)*learning_rate
+    }
+    
+    # update weight
+    w <- vector.w- g
+    vector.w_old <- vector.w
+    for (k in 1: method_no) {
+      vector.w[k] <- w[k] / sum(w)
+    }
+    
+    # update vector.z
+    vector.z_old <- vector.z
+    vector.z <- matrix.Y %*% vector.w
+    
+    # convergence conditions
+    if(norm(matrix(vector.w-vector.w_old), "2") < tol && norm(matrix(vector.z-vector.z_old), "2") < tol ){
+      break
+    }
+    
+    if(any(vector.w < 0)){
+      break
+    }
+    
+    # update iteration
+    t = t + 1
+    
+    # if(t == 10000){
+    #   break
+    # }
+    
+  }
+  output_list <- list("iteration" = t, "g" = g, "w" = w,"vector.w_old" = vector.w_old, "vector.w" = vector.w, "vector.z"  = vector.z, "vector.z_old"  = vector.z_old, "Error" = Error,"Error_ae" = Error_ae, "Error_ae_sum" = Error_ae_sum)
+  
+  return(output_list)
+}
+```
+#### Cost function
+```{r}
+Fn_L1_cost <- function(A, B){
+  vector.z <- as.matrix(A)
+  matrix.Y <- as.matrix(B)
+  
+  J <- rep(0,times = ncol(matrix.Y))
+  for (i in 1: ncol(matrix.Y)) {
+    J[i] <- sum(ae(vector.z, matrix.Y[,i]))
+  }
+  cost <- sum(J)/(ncol(matrix.Y)*nrow(matrix.Y))
+}
+```
+### Supply risk
+#### Run the iteration function 
+```{r}
+# initialization
+L1_sr_time <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = 1)
+L1_sr_w <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = ncol(initial_weight))
+L1_sr_z <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = nrow(agg_sr_df))
+# run the function
+for (i in 1:length(learn_rate)) {
+  for (j in 1:nrow(initial_weight)) {
+  start_time <- Sys.time()
+  L1_sr  <- Fn_L1(matrix(data.matrix(initial_weight[j,])), agg_sr_df,learn_rate[i] )
+  end_time <- Sys.time()
+  L1_sr_time[j + nrow(initial_weight) *(i-1),] <- end_time - start_time
+  L1_sr_w[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(L1_sr[4]))
+  L1_sr_z[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(L1_sr[7]))
+  }
+}
+
+# save the result
+# write_csv(as.data.frame(L1_sr_time), "processed4/L1_sr_time.csv" )
+write_csv(as.data.frame(L1_sr_w), "processed4/L1_sr_w.csv" )
+write_csv(as.data.frame(L1_sr_z), "processed4/L1_sr_z.csv" )
+```
+#### Run the cost function
+```{r}
+L1_sr_cost <- rep(0,times = nrow(L1_sr_z))
+for (i in 1:nrow(L1_sr_z)) {
+  A <- data.matrix(L1_sr_z[i,])
+  L1_sr_cost[i] <- Fn_L1_cost(A, agg_sr_df)
+}
+# L1_sr_cost
+# write_csv(as.data.frame(L1_sr_cost), "processed4/L1_sr_cost.csv" )
+```
+#### Cost and time summary
+```{r}
+L1_sr_cost_summary <- matrix(L1_sr_cost,nrow = nrow(initial_weight), ncol = length(learn_rate))
+colnames(L1_sr_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(L1_sr_cost_summary) <- c("cost_1", "cost_0.1", "cost_0.01")
+
+L1_sr_time_summary <- matrix(L1_sr_time,nrow = nrow(initial_weight), ncol = length(learn_rate) )  
+colnames(L1_sr_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(L1_sr_time_summary) <- c("time_1", "time_0.1", "time_0.01" )
+
+write_csv(as.data.frame(L1_sr_cost_summary), "processed4/L1_sr_cost_summary.csv" )
+write_csv(as.data.frame(L1_sr_time_summary), "processed4/L1_sr_time_summary.csv" )
+```
+### Profit impact
+#### Run the iteration function
+```{r}
+# initialization
+L1_pi_time <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = 1)
+L1_pi_w <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = ncol(initial_weight))
+L1_pi_z <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = nrow(agg_pi_df))
+
+for (i in 1:length(learn_rate)) {
+  for (j in 1:nrow(initial_weight)) {
+  start_time <- Sys.time()
+  L1_pi  <- Fn_L1(matrix(data.matrix(initial_weight[j,])), agg_pi_df,learn_rate[i] )
+  end_time <- Sys.time()
+  L1_pi_time[j + nrow(initial_weight) *(i-1),] <- end_time - start_time
+  L1_pi_w[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(L1_pi[4]))
+  L1_pi_z[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(L1_pi[7]))
+  }
+}
+# save the result
+# write_csv(as.data.frame(L1_pi_time), "processed4/L1_pi_time.csv" )
+write_csv(as.data.frame(L1_pi_w), "processed4/L1_pi_w.csv" )
+write_csv(as.data.frame(L1_pi_z), "processed4/L1_pi_z.csv" )
+```
+
+#### Run the cost function 
+```{r}
+L1_pi_cost <- rep(0,times = nrow(L1_pi_z))
+for (i in 1:nrow(L1_pi_z)) {
+  A <- data.matrix(L1_pi_z[i,])
+  L1_pi_cost[i] <- Fn_L1_cost(A, agg_pi_df)
+}
+# L1_pi_cost
+# write_csv(as.data.frame(L1_pi_cost), "processed4/L1_pi_cost.csv" )
+```
+#### Cost and time summary
+```{r}
+L1_pi_cost_summary <- matrix(L1_pi_cost,nrow = nrow(initial_weight), ncol = length(learn_rate))
+colnames(L1_pi_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(L1_pi_cost_summary) <- c("cost_1", "cost_0.1", "cost_0.01")
+
+L1_pi_time_summary <- matrix(L1_pi_time,nrow = nrow(initial_weight), ncol = length(learn_rate) )  
+colnames(L1_pi_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(L1_pi_time_summary) <- c("time_1", "time_0.1", "time_0.01" )
+
+write_csv(as.data.frame(L1_pi_cost_summary), "processed4/L1_pi_cost_summary.csv" )
+write_csv(as.data.frame(L1_pi_time_summary), "processed4/L1_pi_time_summary.csv" )
+```
+### Supplier willingness
+#### Run the iteration function
+```{r}
+# initialization
+L1_sw_time <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = 1)
+L1_sw_w <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = ncol(initial_weight))
+L1_sw_z <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = nrow(agg_sw_df))
+
+for (i in 1:length(learn_rate)) {
+  for (j in 1:nrow(initial_weight)) {
+  start_time <- Sys.time()
+  L1_sw  <- Fn_L1(matrix(data.matrix(initial_weight[j,])), agg_sw_df,learn_rate[i] )
+  end_time <- Sys.time()
+  L1_sw_time[j + nrow(initial_weight) *(i-1),] <- end_time - start_time
+  L1_sw_w[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(L1_sw[4]))
+  L1_sw_z[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(L1_sw[7]))
+  }
+}
+# save the result
+# write_csv(as.data.frame(L1_sw_time), "processed4/L1_sw_time.csv" )
+write_csv(as.data.frame(L1_sw_w), "processed4/L1_sw_w.csv" )
+write_csv(as.data.frame(L1_sw_z), "processed4/L1_sw_z.csv" )
+```
+
+#### Run the cost function
+```{r}
+L1_sw_cost <- rep(0,times = nrow(L1_sw_z))
+for (i in 1:nrow(L1_sw_z)) {
+  A <- data.matrix(L1_sw_z[i,])
+  L1_sw_cost[i] <- Fn_L1_cost(A, agg_sw_df)
+}
+# L1_sw_cost
+# write_csv(as.data.frame(L1_sw_cost), "processed4/L1_sw_cost.csv" )
+```
+
+#### Cost and time summary
+```{r}
+L1_sw_cost_summary <- matrix(L1_sw_cost,nrow = nrow(initial_weight), ncol = length(learn_rate))
+colnames(L1_sw_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(L1_sw_cost_summary) <- c("cost_1", "cost_0.1", "cost_0.01")
+
+L1_sw_time_summary <- matrix(L1_sw_time,nrow = nrow(initial_weight), ncol = length(learn_rate) )  
+colnames(L1_sw_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(L1_sw_time_summary) <- c("time_1", "time_0.1", "time_0.01" )
+
+write_csv(as.data.frame(L1_sw_cost_summary), "processed4/L1_sw_cost_summary.csv" )
+write_csv(as.data.frame(L1_sw_time_summary), "processed4/L1_sw_time_summary.csv" )
+```
+### Supplier quality capability
+#### Run the iteration function
+```{r}
+# initialization
+L1_sqc_time <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = 1)
+L1_sqc_w <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = ncol(initial_weight))
+L1_sqc_z <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = nrow(agg_sqc_df))
+
+for (i in 1:length(learn_rate)) {
+  for (j in 1:nrow(initial_weight)) {
+  start_time <- Sys.time()
+  L1_sqc  <- Fn_L1(matrix(data.matrix(initial_weight[j,])), agg_sqc_df,learn_rate[i] )
+  end_time <- Sys.time()
+  L1_sqc_time[j + nrow(initial_weight) *(i-1),] <- end_time - start_time
+  L1_sqc_w[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(L1_sqc[4]))
+  L1_sqc_z[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(L1_sqc[7]))
+  }
+}
+
+# save the result
+# write_csv(as.data.frame(L1_sqc_time), "processed4/L1_sqc_time.csv" )
+write_csv(as.data.frame(L1_sqc_w), "processed4/L1_sqc_w.csv" )
+write_csv(as.data.frame(L1_sqc_z), "processed4/L1_sqc_z.csv" )
+```
+
+#### Run the cost function
+```{r}
+L1_sqc_cost <- rep(0,times = nrow(L1_sqc_z))
+for (i in 1:nrow(L1_sqc_z)) {
+  A <- data.matrix(L1_sqc_z[i,])
+  L1_sqc_cost[i] <- Fn_L1_cost(A, agg_sqc_df)
+}
+# L1_sqc_cost
+# write_csv(as.data.frame(L1_sqc_cost), "processed3/L1_sqc_cost.csv" )
+```
+
+#### Cost and time summary
+```{r}
+L1_sqc_cost_summary <- matrix(L1_sqc_cost,nrow = nrow(initial_weight), ncol = length(learn_rate))
+colnames(L1_sqc_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(L1_sqc_cost_summary) <- c("cost_1", "cost_0.1", "cost_0.01")
+
+L1_sqc_time_summary <- matrix(L1_sqc_time,nrow = nrow(initial_weight), ncol = length(learn_rate) )  
+colnames(L1_sqc_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(L1_sqc_time_summary) <- c("time_1", "time_0.1", "time_0.01" )
+
+write_csv(as.data.frame(L1_sqc_cost_summary), "processed4/L1_sqc_cost_summary.csv" )
+write_csv(as.data.frame(L1_sqc_time_summary), "processed4/L1_sqc_time_summary.csv" )
+```
+## Log-cosh (LC) loss function
+### Set up function
+#### Iteration function
+```{r}
+Fn_LC <- function(A, B, C){
+  vector.w <- A
+  matrix.Y <- as.matrix(B)
+  method_no <- ncol(matrix.Y)
+  alt_no <- nrow(matrix.Y)
+  vector.z <- matrix.Y %*% vector.w
+  learning_rate <- C
+  
+  # parameter initialization 
+  tol <- 10e-10 # tolerance based on which the main loop is terminated
+  iter_max <- 10e5 # maximum number of iteration
+  t <- 0        # iteration indicator
+  Error_tanh_sum <- rep(0,times = alt_no)
+  g <- rep(0,times = method_no)
+  w <- rep(0,times = method_no)
+  
+  while(t < iter_max){
+    Error <- matrix.Y - repmat(vector.z,1,method_no)
+    Error_tanh <- tanh(Error)
+    
+    for (i in 1: alt_no) {
+      Error_tanh_sum[i] <- sum(Error_tanh[i,])
+    }
+    
+    for (k in 1: method_no) {
+      g[k] <- sum(Error_tanh_sum * matrix.Y[,k])/(method_no * alt_no)*learning_rate
+    }
+    
+    # update weight
+    w <- vector.w- g
+    vector.w_old <- vector.w
+    for (k in 1: method_no) {
+      vector.w[k] <- w[k] / sum(w)
+    }
+    
+    # update vector.z
+    vector.z_old <- vector.z
+    vector.z <- matrix.Y %*% vector.w
+    
+    # convergence conditions
+    if(norm(matrix(vector.w-vector.w_old), "2") < tol && norm(matrix(vector.z-vector.z_old), "2") < tol ){
+      break
+    }
+    
+    if(any(vector.w < 0)){
+      break
+    }
+    
+    # update iteration
+    t = t + 1
+    # if(t == 1){
+    #   break
+    # }
+  }
+  output_list <- list("iteration" = t, "g" = g, "vector.w_old" = vector.w_old, "vector.w" = vector.w, "vector.z"  = vector.z, "vector.z_old"  = vector.z_old, "Error" = Error,"Error_tanh" = Error_tanh, "Error_tanh_sum" = Error_tanh_sum)
+  
+  return(output_list)
+}
+```
+#### Cost function
+```{r}
+Fn_LC_cost <- function(A, B){
+  vector.z <- as.matrix(A)
+  matrix.Y <- as.matrix(B)
+  
+  J <- rep(0,times = ncol(matrix.Y))
+  for (i in 1: ncol(matrix.Y)) {
+    J[i] <- sum(log(cosh(vector.z - matrix.Y[,i]),exp(1)))
+  }
+  cost <- sum(J)/(ncol(matrix.Y)*nrow(matrix.Y))
+}
+```
+### Supply risk
+#### Run the iteration function
+```{r}
+# initialization
+LC_sr_time <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = 1)
+LC_sr_w <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = ncol(initial_weight))
+LC_sr_z <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = nrow(agg_sr_df))
+
+for (i in 1:length(learn_rate)) {
+  for (j in 1:nrow(initial_weight)) {
+  start_time <- Sys.time()
+  LC_sr  <- Fn_LC(matrix(data.matrix(initial_weight[j,])), agg_sr_df,learn_rate[i] )
+  end_time <- Sys.time()
+  LC_sr_time[j + nrow(initial_weight) *(i-1),] <- end_time - start_time
+  LC_sr_w[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(LC_sr[3]))
+  LC_sr_z[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(LC_sr[6]))
+  }
+}
+# save the result
+# write_csv(as.data.frame(LC_sr_time), "processed4/LC_sr_time.csv" )
+write_csv(as.data.frame(LC_sr_w), "processed4/LC_sr_w.csv" )
+write_csv(as.data.frame(LC_sr_z), "processed4/LC_sr_z.csv" )
+```
+
+#### Run the cost function
+```{r}
+LC_sr_cost <- rep(0,times = nrow(LC_sr_z))
+for (i in 1:nrow(LC_sr_z)) {
+  A <- data.matrix(LC_sr_z[i,])
+  LC_sr_cost[i] <- Fn_LC_cost(A, agg_sr_df)
+}
+#LC_sr_cost
+# write_csv(as.data.frame(LC_sr_cost), "processed4/LC_sr_cost.csv" )
+```
+
+#### Cost and time summary
+```{r}
+LC_sr_cost_summary <- matrix(LC_sr_cost,nrow = nrow(initial_weight), ncol = length(learn_rate))
+colnames(LC_sr_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(LC_sr_cost_summary) <- c("cost_1", "cost_0.1", "cost_0.01")
+
+LC_sr_time_summary <- matrix(LC_sr_time,nrow = nrow(initial_weight), ncol = length(learn_rate) )  
+colnames(LC_sr_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(LC_sr_time_summary) <- c("time_1", "time_0.1", "time_0.01" )
+
+write_csv(as.data.frame(LC_sr_cost_summary), "processed4/LC_sr_cost_summary.csv" )
+write_csv(as.data.frame(LC_sr_time_summary), "processed4/LC_sr_time_summary.csv" )
+```
+### Profit impact
+#### Run the iteration function
+```{r}
+# initialization
+LC_pi_time <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = 1)
+LC_pi_w <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = ncol(initial_weight))
+LC_pi_z <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = nrow(agg_pi_df))
+
+for (i in 1:length(learn_rate)) {
+  for (j in 1:nrow(initial_weight)) {
+  start_time <- Sys.time()
+  LC_pi  <- Fn_LC(matrix(data.matrix(initial_weight[j,])), agg_pi_df,learn_rate[i] )
+  end_time <- Sys.time()
+  LC_pi_time[j + nrow(initial_weight) *(i-1),] <- end_time - start_time
+  LC_pi_w[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(LC_pi[3]))
+  LC_pi_z[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(LC_pi[6]))
+  }
+}
+# save the result
+# write_csv(as.data.frame(LC_pi_time), "processed4/LC_pi_time.csv" )
+write_csv(as.data.frame(LC_pi_w), "processed4/LC_pi_w.csv" )
+write_csv(as.data.frame(LC_pi_z), "processed4/LC_pi_z.csv" )
+```
+
+#### Run the cost function
+```{r}
+# calculate the cost for each setting
+LC_pi_cost <- rep(0,times = nrow(LC_pi_z))
+for (i in 1:nrow(LC_pi_z)) {
+  A <- data.matrix(LC_pi_z[i,])
+  LC_pi_cost[i] <- Fn_LC_cost(A, agg_pi_df)
+}
+#LC_pi_cost
+#write_csv(as.data.frame(LC_pi_cost), "processed3/LC_pi_cost.csv" )
+```
+
+#### Cost and time summary
+```{r}
+LC_pi_cost_summary <- matrix(LC_pi_cost,nrow = nrow(initial_weight), ncol = length(learn_rate))
+colnames(LC_pi_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(LC_pi_cost_summary) <- c("cost_1", "cost_0.1", "cost_0.01")
+
+LC_pi_time_summary <- matrix(LC_pi_time,nrow = nrow(initial_weight), ncol = length(learn_rate) )  
+colnames(LC_pi_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(LC_pi_time_summary) <- c("time_1", "time_0.1", "time_0.01" )
+
+write_csv(as.data.frame(LC_pi_cost_summary), "processed4/LC_pi_cost_summary.csv" )
+write_csv(as.data.frame(LC_pi_time_summary), "processed4/LC_pi_time_summary.csv" )
+```
+### Supplier willingness
+#### Run the iteration function
+```{r}
+# initialization
+LC_sw_time <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = 1)
+LC_sw_w <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = ncol(initial_weight))
+LC_sw_z <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = nrow(agg_sw_df))
+
+for (i in 1:length(learn_rate)) {
+  for (j in 1:nrow(initial_weight)) {
+  start_time <- Sys.time()
+  LC_sw  <- Fn_LC(matrix(data.matrix(initial_weight[j,])), agg_sw_df,learn_rate[i] )
+  end_time <- Sys.time()
+  LC_sw_time[j + nrow(initial_weight) *(i-1),] <- end_time - start_time
+  LC_sw_w[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(LC_sw[3]))
+  LC_sw_z[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(LC_sw[6]))
+  }
+}
+# save the result
+# write_csv(as.data.frame(LC_sw_time), "processed4/LC_sw_time.csv" )
+write_csv(as.data.frame(LC_sw_w), "processed4/LC_sw_w.csv" )
+write_csv(as.data.frame(LC_sw_z), "processed4/LC_sw_z.csv" )
+```
+#### Run the cost function
+```{r}
+LC_sw_cost <- rep(0,times = nrow(LC_sw_z))
+for (i in 1:nrow(LC_sw_z)) {
+  A <- data.matrix(LC_sw_z[i,])
+  LC_sw_cost[i] <- Fn_LC_cost(A, agg_sw_df)
+}
+# LC_sw_cost
+# write_csv(as.data.frame(LC_sw_cost), "processed3/LC_sw_cost.csv" )
+```
+
+#### Cost and time summary
+```{r}
+LC_sw_cost_summary <- matrix(LC_sw_cost,nrow = nrow(initial_weight), ncol = length(learn_rate))
+colnames(LC_sw_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(LC_sw_cost_summary) <- c("cost_1", "cost_0.1", "cost_0.01")
+
+LC_sw_time_summary <- matrix(LC_sw_time,nrow = nrow(initial_weight), ncol = length(learn_rate) )  
+colnames(LC_sw_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(LC_sw_time_summary) <- c("time_1", "time_0.1", "time_0.01" )
+
+write_csv(as.data.frame(LC_sw_cost_summary), "processed4/LC_sw_cost_summary.csv" )
+write_csv(as.data.frame(LC_sw_time_summary), "processed4/LC_sw_time_summary.csv" )
+```
+### Supplier quality capability
+#### Run the iteration function
+```{r}
+# initialization
+LC_sqc_time <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = 1)
+LC_sqc_w <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = ncol(initial_weight))
+LC_sqc_z <- matrix(, nrow = nrow(initial_weight)*length(learn_rate), ncol = nrow(agg_sqc_df))
+
+for (i in 1:length(learn_rate)) {
+  for (j in 1:nrow(initial_weight)) {
+  start_time <- Sys.time()
+  LC_sqc  <- Fn_LC(matrix(data.matrix(initial_weight[j,])), agg_sqc_df,learn_rate[i] )
+  end_time <- Sys.time()
+  LC_sqc_time[j + nrow(initial_weight) *(i-1),] <- end_time - start_time
+  LC_sqc_w[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(LC_sqc[3]))
+  LC_sqc_z[j + nrow(initial_weight) *(i-1),] <- matrix(unlist(LC_sqc[6]))
+  }
+}
+# save the result
+# write_csv(as.data.frame(LC_sqc_time), "processed4/LC_sqc_time.csv" )
+write_csv(as.data.frame(LC_sqc_w), "processed4/LC_sqc_w.csv" )
+write_csv(as.data.frame(LC_sqc_z), "processed4/LC_sqc_z.csv" )
+```
+
+#### Run the cost function
+```{r}
+# calculate the cost for each setting
+LC_sqc_cost <- rep(0,times = nrow(LC_sqc_z))
+for (i in 1:nrow(LC_sqc_z)) {
+  A <- data.matrix(LC_sqc_z[i,])
+  LC_sqc_cost[i] <- Fn_LC_cost(A, agg_sqc_df)
+}
+# LC_sqc_cost
+# write_csv(as.data.frame(LC_sqc_cost), "processed4/LC_sqc_cost.csv" )
+```
+
+#### Cost and time summary
+```{r}
+LC_sqc_cost_summary <- matrix(LC_sqc_cost,nrow = nrow(initial_weight), ncol = length(learn_rate))
+colnames(LC_sqc_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(LC_sqc_cost_summary) <- c("cost_1", "cost_0.1", "cost_0.01")
+
+LC_sqc_time_summary <- matrix(LC_sqc_time,nrow = nrow(initial_weight), ncol = length(learn_rate) )  
+colnames(LC_sqc_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(LC_sqc_time_summary) <- c("time_1", "time_0.1", "time_0.01" )
+
+write_csv(as.data.frame(LC_sqc_cost_summary), "processed4/LC_sqc_cost_summary.csv" )
+write_csv(as.data.frame(LC_sqc_time_summary), "processed4/LC_sqc_time_summary.csv" )
+```
+## M-estimators (welsch) loss function
+### Set up function
+#### Iteration function
+```{r}
+Fn_ME <- function(A,B){
+  vector.w <- A
+  matrix.Y <- as.matrix(B)
+  method_no <- ncol(matrix.Y)
+  alt_no <- nrow(matrix.Y)
+  vector.z <- matrix.Y %*% vector.w
+  
+  # parameter initialization
+  tol <- 10e-10 # tolerance based on which the main loop is terminated
+  iter_max <- 10e5 # maximum number of iteration
+  t <- 0        # iteration indicator
+  alpha <- rep(0,times= ncol(matrix.Y))
+  Error_norm <- rep(0,times= ncol(matrix.Y))
+  
+  while(t < iter_max){
+    Error <- matrix.Y - repmat(vector.z,1,method_no)
+    
+    for (i in 1: method_no) {
+    Error_norm[i] <- sqrt(sum(Error[,i]^2))
+    }
+    
+    if(sum(Error_norm) == 0){
+      break
+    }
+    
+    sigma_square <- sum(Error_norm^2)/(2*alt_no)   # the formula used in (Mohammadi and Rezaie,2020) is not correct
+    
+    # update alpha
+    alpha_old <- alpha
+    
+    for (i in 1: method_no) {
+      alpha[i] <- exp(-(Error_norm[i])^2/(sigma_square))
+    }
+    
+    # update vector.z
+    vector.z_old <- vector.z
+
+    for (i in 1: method_no) {
+      vector.w[i] <- alpha[i] / sum(alpha)
+    }
+    vector.z <- matrix.Y %*% vector.w
+    
+    # convergence conditions
+    if(norm(matrix(alpha-alpha_old), "2") < tol && norm(matrix(vector.z-vector.z_old), "2") < tol ){
+      break
+    }
+    
+    if(any(vector.w < 0)){
+      break
+    }
+    # update iteration
+    t = t + 1
+    
+    # if(iteration == 1){
+    #   break
+    # }
+  }
+  output_list <- list("iteration" = t, "sigma_square" = sigma_square, "alpha_old" = alpha_old,"alpha" = alpha, "vector.w" = vector.w, "vector.z"  = vector.z, "vector.z_old"  = vector.z_old)
+  
+  return(output_list)
+}
+```
+
+#### Cost function
+```{r}
+Fn_ME_cost <- function(A, B){
+  vector.z <- as.matrix(A)
+  matrix.Y <- as.matrix(B)
+  Error_norm <- rep(0,times= ncol(matrix.Y))
+  J <- rep(0,times = ncol(matrix.Y))
+  
+  Error <- matrix.Y - repmat(vector.z,1,ncol(matrix.Y))
+  for (i in 1: ncol(matrix.Y)) {
+    Error_norm[i] <- sqrt(sum(Error[,i]^2))
+  }
+  
+  sigma_square <- sum(Error_norm^2)/ (2*nrow(matrix.Y)*ncol(matrix.Y))
+  
+  for (i in 1: ncol(matrix.Y)) {
+    J[i] <- sum(1-exp(-sum(Error[,i]^2)/sigma_square))
+  }
+
+  cost <- sum(J)/(ncol(matrix.Y)*nrow(matrix.Y))
+}
+```
+### Supply risk
+#### Run the iteration function
+```{r}
+# initialization
+ME_sr_time <- matrix(, nrow = nrow(initial_weight), ncol = 1)
+ME_sr_w <- matrix(, nrow = nrow(initial_weight), ncol = ncol(initial_weight))
+ME_sr_z <- matrix(, nrow = nrow(initial_weight), ncol = nrow(agg_sr_df))
+
+for (j in 1:nrow(initial_weight)) {
+start_time <- Sys.time()
+ME_sr  <- Fn_ME(matrix(data.matrix(initial_weight[j,])), agg_sr_df )
+end_time <- Sys.time()
+ME_sr_time[j,] <- end_time - start_time
+ME_sr_w[j,] <- matrix(unlist(ME_sr[5]))
+ME_sr_z[j,] <- matrix(unlist(ME_sr[7]))
+}
+# save the result
+# write_csv(as.data.frame(ME_sr_time), "processed4/ME_sr_time.csv" )
+write_csv(as.data.frame(ME_sr_w), "processed4/ME_sr_w.csv" )
+write_csv(as.data.frame(ME_sr_z), "processed4/ME_sr_z.csv" )
+```
+#### Run the cost function
+```{r}
+ME_sr_cost <- rep(0,times = nrow(ME_sr_z))
+for (i in 1:nrow(ME_sr_z)) {
+  A <- data.matrix(ME_sr_z[i,])
+  ME_sr_cost[i] <- Fn_ME_cost(A, agg_sr_df)
+}
+# ME_sr_cost
+# write_csv(as.data.frame(ME_sr_cost), "processed4/ME_sr_cost.csv" )
+```
+#### Cost and time summary
+```{r}
+ME_sr_cost_summary <- matrix(ME_sr_cost,nrow = nrow(initial_weight), ncol = 1)
+colnames(ME_sr_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(ME_sr_cost_summary) <- c("cost")
+
+ME_sr_time_summary <- matrix(ME_sr_time,nrow = nrow(initial_weight), ncol = 1 )  
+colnames(ME_sr_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(ME_sr_time_summary) <- c("time" )
+
+write_csv(as.data.frame(ME_sr_cost_summary), "processed4/ME_sr_cost_summary.csv" )
+write_csv(as.data.frame(ME_sr_time_summary), "processed4/ME_sr_time_summary.csv" )
+```
+### Profit impact
+#### Run the iteration function
+```{r}
+# initialization
+ME_pi_time <- matrix(, nrow = nrow(initial_weight), ncol = 1)
+ME_pi_w <- matrix(, nrow = nrow(initial_weight), ncol = ncol(initial_weight))
+ME_pi_z <- matrix(, nrow = nrow(initial_weight), ncol = nrow(agg_pi_df))
+
+for (j in 1:nrow(initial_weight)) {
+start_time <- Sys.time()
+ME_pi  <- Fn_ME(matrix(data.matrix(initial_weight[j,])), agg_pi_df )
+end_time <- Sys.time()
+ME_pi_time[j,] <- end_time - start_time
+ME_pi_w[j,] <- matrix(unlist(ME_pi[5]))
+ME_pi_z[j,] <- matrix(unlist(ME_pi[7]))
+}
+```
+```{r}
+# save the result
+# write_csv(as.data.frame(ME_pi_time), "processed4/ME_pi_time.csv" )
+write_csv(as.data.frame(ME_pi_w), "processed4/ME_pi_w.csv" )
+write_csv(as.data.frame(ME_pi_z), "processed4/ME_pi_z.csv" )
+```
+
+#### Run the cost function
+```{r}
+# caMEulate the cost for each setting
+ME_pi_cost <- rep(0,times = nrow(ME_pi_z))
+for (i in 1:nrow(ME_pi_z)) {
+  A <- data.matrix(ME_pi_z[i,])
+  ME_pi_cost[i] <- Fn_ME_cost(A, agg_pi_df)
+}
+# ME_pi_cost
+# write_csv(as.data.frame(ME_pi_cost), "processed4/ME_pi_cost.csv" )
+```
+#### Cost and time summary
+```{r}
+ME_pi_cost_summary <- matrix(ME_pi_cost,nrow = nrow(initial_weight), ncol = 1)
+colnames(ME_pi_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(ME_pi_cost_summary) <- c("cost")
+
+ME_pi_time_summary <- matrix(ME_pi_time,nrow = nrow(initial_weight), ncol = 1 )  
+colnames(ME_pi_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(ME_pi_time_summary) <- c("time" )
+
+write_csv(as.data.frame(ME_pi_cost_summary), "processed4/ME_pi_cost_summary.csv" )
+write_csv(as.data.frame(ME_pi_time_summary), "processed4/ME_pi_time_summary.csv" )
+```
+### Supplier willingness
+#### Run the iteration function
+```{r}
+# initialization
+ME_sw_time <- matrix(, nrow = nrow(initial_weight), ncol = 1)
+ME_sw_w <- matrix(, nrow = nrow(initial_weight), ncol = ncol(initial_weight))
+ME_sw_z <- matrix(, nrow = nrow(initial_weight), ncol = nrow(agg_sw_df))
+
+for (j in 1:nrow(initial_weight)) {
+start_time <- Sys.time()
+ME_sw  <- Fn_ME(matrix(data.matrix(initial_weight[j,])), agg_sw_df )
+end_time <- Sys.time()
+ME_sw_time[j,] <- end_time - start_time
+ME_sw_w[j,] <- matrix(unlist(ME_sw[5]))
+ME_sw_z[j,] <- matrix(unlist(ME_sw[7]))
+}
+```
+```{r}
+# save the result
+# write_csv(as.data.frame(ME_sw_time), "processed4/ME_sw_time.csv" )
+write_csv(as.data.frame(ME_sw_w), "processed4/ME_sw_w.csv" )
+write_csv(as.data.frame(ME_sw_z), "processed4/ME_sw_z.csv" )
+```
+
+#### Run the cost function
+```{r}
+ME_sw_cost <- rep(0,times = nrow(ME_sw_z))
+for (i in 1:nrow(ME_sw_z)) {
+  A <- data.matrix(ME_sw_z[i,])
+  ME_sw_cost[i] <- Fn_ME_cost(A, agg_sw_df)
+}
+# ME_sw_cost
+# write_csv(as.data.frame(ME_sw_cost), "processed4/ME_sw_cost.csv" )
+```
+#### Cost and time summary
+```{r}
+ME_sw_cost_summary <- matrix(ME_sw_cost,nrow = nrow(initial_weight), ncol = 1)
+colnames(ME_sw_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(ME_sw_cost_summary) <- c("cost")
+
+ME_sw_time_summary <- matrix(ME_sw_time,nrow = nrow(initial_weight), ncol = 1 )  
+colnames(ME_sw_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(ME_sw_time_summary) <- c("time" )
+
+write_csv(as.data.frame(ME_sw_cost_summary), "processed4/ME_sw_cost_summary.csv" )
+write_csv(as.data.frame(ME_sw_time_summary), "processed4/ME_sw_time_summary.csv" )
+```
+### Supplier quality capability
+#### Run the iteration function
+```{r}
+# initialization
+ME_sqc_time <- matrix(, nrow = nrow(initial_weight), ncol = 1)
+ME_sqc_w <- matrix(, nrow = nrow(initial_weight), ncol = ncol(initial_weight))
+ME_sqc_z <- matrix(, nrow = nrow(initial_weight), ncol = nrow(agg_sqc_df))
+
+for (j in 1:nrow(initial_weight)) {
+start_time <- Sys.time()
+ME_sqc  <- Fn_ME(matrix(data.matrix(initial_weight[j,])), agg_sqc_df )
+end_time <- Sys.time()
+ME_sqc_time[j,] <- end_time - start_time
+ME_sqc_w[j,] <- matrix(unlist(ME_sqc[5]))
+ME_sqc_z[j,] <- matrix(unlist(ME_sqc[7]))
+}
+```
+```{r}
+# save the result
+# write_csv(as.data.frame(ME_sqc_time), "processed4/ME_sqc_time.csv" )
+write_csv(as.data.frame(ME_sqc_w), "processed4/ME_sqc_w.csv" )
+write_csv(as.data.frame(ME_sqc_z), "processed4/ME_sqc_z.csv" )
+```
+
+#### Run the cost function
+```{r}
+ME_sqc_cost <- rep(0,times = nrow(ME_sqc_z))
+for (i in 1:nrow(ME_sqc_z)) {
+  A <- data.matrix(ME_sqc_z[i,])
+  ME_sqc_cost[i] <- Fn_ME_cost(A, agg_sqc_df)
+}
+# ME_sqc_cost
+# write_csv(as.data.frame(ME_sqc_cost), "processed4/ME_sqc_cost.csv" )
+```
+#### Cost and time summary
+```{r}
+ME_sqc_cost_summary <- matrix(ME_sqc_cost,nrow = nrow(initial_weight), ncol = 1)
+colnames(ME_sqc_cost_summary, do.NULL = TRUE, prefix = "col")
+colnames(ME_sqc_cost_summary) <- c("cost")
+
+ME_sqc_time_summary <- matrix(ME_sqc_time,nrow = nrow(initial_weight), ncol = 1 )  
+colnames(ME_sqc_time_summary, do.NULL = TRUE, prefix = "col")
+colnames(ME_sqc_time_summary) <- c("time" )
+
+write_csv(as.data.frame(ME_sqc_cost_summary), "processed4/ME_sqc_cost_summary.csv" )
+write_csv(as.data.frame(ME_sqc_time_summary), "processed4/ME_sqc_time_summary.csv" )
+```
+
+
+
+
